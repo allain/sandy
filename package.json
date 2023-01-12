@@ -1,0 +1,25 @@
+{
+  "name": "cindy",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "serve ./static",
+    "build": "esbuild --bundle --sourcemap --format=esm --outfile=./static/main.js ./src/main.mjs",
+    "test": "web-test-runner src/*.test.mjs --node-resolve --esbuild-target=auto"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@esm-bundle/chai": "4.3.4-fix.0",
+    "@web/dev-server-esbuild": "^0.3.3",
+    "@web/test-runner": "^0.15.0",
+    "esbuild": "^0.16.17",
+    "serve": "^14.1.2"
+  },
+  "dependencies": {
+    "three": "^0.148.0"
+  }
+}
