@@ -1,10 +1,13 @@
 import * as THREE from 'three'
+import { RGBA_ASTC_10x10_Format } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import Stats from 'three/addons/libs/stats.module.js'
+
 function randInt(n) {
   return Math.floor(Math.random() * n)
 }
 
-const SIZE = 50
+const SIZE = 64
 
 export function main(rootEl = document.body) {
   const scene = new THREE.Scene()
@@ -12,6 +15,7 @@ export function main(rootEl = document.body) {
   scene.background = new THREE.Color(0x333333) // Gray background
   const space = 2
 
+  const stats = new Stats()
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -32,177 +36,250 @@ export function main(rootEl = document.body) {
   camera.position.y = SIZE
   camera.position.z = space * SIZE
 
-  const directionalLight = new THREE.DirectionalLight(0xff0000, 5)
-  directionalLight.position.x = 0
-  directionalLight.position.y = 5
-  directionalLight.position.z = 5
-  scene.add(directionalLight)
+  const pointLight = new THREE.PointLight(0xaa8899, 0.75)
+  pointLight.position.set(50, -25, 75)
+  camera.add(pointLight)
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 3)
   scene.add(ambientLight)
 
-  rootEl.appendChild(renderer.domElement)
+  rootEl.append(renderer.domElement)
+  rootEl.append(stats.domElement)
 
-  const world = new World(scene, {
-    sand: {
-      color: '#ff9900'
+  const world = new World({
+    scene,
+    elements: {
+      sand: {
+        color: '#ff9900'
+      },
+      water: {
+        color: '#0000ff',
+        opacity: 0.25
+      }
     },
-    water: {
-      color: '#0000ff'
-    }
+    size: SIZE
   })
 
-  for (let n = 0; n < SIZE * SIZE * 10; n++) {
-    world.set(randInt(SIZE), randInt(SIZE), randInt(SIZE), 'sand')
+  for (let n = 0; n < SIZE; n++) {
+    world.set(0, 0, n, 'sand')
   }
 
+  let insertX = randInt(SIZE)
+  let insertY = randInt(SIZE)
+
   setInterval(() => {
-    let count = 0
-    for (const c of world._columns) {
-      c.atoms.forEach((a) => a && count++)
-    }
-    console.log('atoms', count)
-  }, 1000)
-  setInterval(() => {
-    if (Date.now() - lastFrame > 100) return
-    for (let n = 0; n < 100; n++) {
-      world.set(randInt(SIZE), randInt(SIZE), SIZE * 3, 'water')
-    }
+    world.set(
+      insertX,
+      insertY,
+      SIZE - 1,
+      Math.random() > 0.5 ? 'sand' : 'water'
+    )
     world.tick()
-  }, 1000 / 30)
+  }, 1000 / 120)
+
+  setInterval(() => {
+    insertX = randInt(SIZE)
+    insertY = randInt(SIZE)
+  }, 5000)
+
+  setInterval(() => {}, 100)
 
   let lastFrame = Date.now()
   function animate(time) {
     lastFrame = Date.now()
     requestAnimationFrame(animate)
     world.update()
+    stats.update()
     renderer.render(scene, camera)
   }
   animate()
 }
 
 class World {
-  constructor(scene, elements = {}) {
-    const size = (this._size = SIZE)
-    const height = (this._height = SIZE)
-    this._atoms = []
-    this._columns = []
+  constructor({ scene, elements = {}, size = 32 }) {
+    this._size = size
+    this._cubes = [null]
+    this._elements = elements
+    this._elementNames = [null, ...Object.keys(elements)]
 
-    this._elementTypes = Object.fromEntries(
-      Object.entries(elements).map(([name, { color }]) => {
-        const cube = buildCube(color, size * size * height)
-        scene.add(cube)
-        return [name, cube]
-      })
-    )
+    this._atoms = new Uint8ClampedArray(size ** 3)
+
+    for (const [name, element] of Object.entries(elements)) {
+      const cube = buildCube(element, size ** 3)
+      cube.position.set(-SIZE / 2, 0, -SIZE / 2)
+      cube.updateMatrix()
+      scene.add(cube)
+      this._cubes.push(cube)
+    }
   }
 
   set(x, y, z, type) {
-    let column = this._columns.find((c) => c.x === x && c.y === y)
-    if (column) {
-      column.atoms[z] = type
+    if (type === null) {
+      this._set(x, y, z, 0)
     } else {
-      const atoms = []
-      atoms[z] = type
-      this._columns.push({ x, y, atoms })
+      const typeIndex = this._elementNames.indexOf(type)
+      this._set(x, y, z, typeIndex)
     }
   }
 
   get(x, y, z) {
-    const column = this._columns.find((c) => c.x === x && c.y === y)
-    return column?.atoms[z]
+    const index = this._get(x, y, z)
+    return this._elementNames[index]
+  }
+
+  _set(x, y, z, type) {
+    const size = this._size
+    const index = size * (x * size + y) + z
+    this._atoms[index] = type
+  }
+
+  _get(x, y, z) {
+    const size = this._size
+    const index = size * (x * size + y) + z
+    return this._atoms[index]
   }
 
   tick() {
-    console.time('tick')
-    this._columns.forEach((c) => {
-      c.atoms.forEach((type, z, atoms) => {
-        if (!type || !z) return
-        const under = atoms[z - 1]
-        if (under) {
-          const siblings = [
-            this.get(c.x - 1, c.y, z),
-            this.get(c.x + 1, c.y, z),
-            this.get(c.x, c.y - 1, z),
-            this.get(c.x, c.y + 1, z)
-          ]
-          const emptyIndexes = siblings
-            .map((s, index) => (s ? null : index))
-            .filter((x) => x)
-          if (emptyIndexes.length === 0) return
-          const nextIndex = emptyIndexes[randInt(emptyIndexes.length)]
-          switch (nextIndex) {
+    const size = this._size
+    const sizeSq = size * size
+
+    const atoms = this._atoms
+
+    function swapAtoms(n1, n2) {
+      const t = atoms[n1]
+      atoms[n1] = atoms[n2]
+      atoms[n2] = t
+    }
+
+    function isFillable(n1) {
+      return atoms[n1] == 0 || atoms[n1] === 2
+    }
+
+    for (let n = 0; n < atoms.length; n++) {
+      const self = atoms[n]
+      if (!self) continue
+      const z = n % size
+      if (z === 0) continue
+
+      const y = Math.floor(n / size) % size
+      const x = Math.floor(n / sizeSq)
+
+      const under = atoms[n - 1]
+
+      if (under) {
+        // sand above water, swap them
+        if (self === 1 && isFillable(n - 1)) {
+          swapAtoms(n, n - 1)
+          continue
+        }
+        let dir = randInt(4)
+        // sand behavior
+        if (self === 1) {
+          switch (dir) {
             case 0:
-              atoms[z] = null
-              this.set(c.x - 1, c.y, z, type)
+              if (x > 0 && z > 1) {
+                if (isFillable(n - sizeSq) && isFillable(n - sizeSq - 1)) {
+                  swapAtoms(n - sizeSq - 1, n)
+                }
+              }
               break
             case 1:
-              atoms[z] = null
-              this.set(c.x + 1, c.y, z, type)
+              if (x < size - 1 && z > 1) {
+                if (isFillable(n + sizeSq) && isFillable(n + sizeSq - 1)) {
+                  swapAtoms(n + sizeSq - 1, n)
+                }
+              }
               break
             case 2:
-              atoms[z] = null
-              this.set(c.x, c.y - 1, z, type)
+              if (y > 0 && z > 1) {
+                if (isFillable(n - size) && isFillable(n - size - 1)) {
+                  swapAtoms(n - size - 1, n)
+                }
+              }
               break
             case 3:
-              atoms[z] = null
-              this.set(c.x, c.y + 1, z, type)
+              if (y < size - 1 && z > 1) {
+                if (isFillable(n + size) && isFillable(n + size - 1)) {
+                  swapAtoms(n + size - 1, n)
+                }
+              }
               break
           }
-        } else {
-          atoms[z] = null
-          atoms[z - 1] = type
+        } else if (self === 2) {
+          switch (dir) {
+            case 0:
+              if (x > 0) {
+                if (isFillable(n - sizeSq)) {
+                  swapAtoms(n - sizeSq, n)
+                }
+              }
+              break
+            case 1:
+              if (x < size - 1) {
+                if (isFillable(n + sizeSq)) {
+                  swapAtoms(n + sizeSq, n)
+                }
+              }
+              break
+            case 2:
+              if (y > 0) {
+                if (isFillable(n - size)) {
+                  swapAtoms(n - size, n)
+                }
+              }
+              break
+            case 3:
+              if (y < size - 1) {
+                if (isFillable(n + size)) {
+                  swapAtoms(n + size, n)
+                }
+              }
+              break
+          }
         }
-      })
-    })
-    console.timeEnd('tick')
+      } else {
+        swapAtoms(n, n - 1)
+      }
+      // }
+    }
   }
 
   update() {
     const dummy = new THREE.Object3D()
-    const typeCounts = Object.fromEntries(
-      Object.keys(this._elementTypes).map((typeName) => [typeName, 0])
-    )
+    const size = this._size
+    const sizeSq = size * size
+    const atoms = this._atoms
+    const cubes = this._cubes
 
-    for (const c of this._columns) {
-      c.atoms.forEach((type, z) => {
-        if (!type) return
-        dummy.position.set(c.x - SIZE / 2, z, c.y - SIZE / 2)
-        dummy.updateMatrix()
-        this._elementTypes[type].setMatrixAt(typeCounts[type]++, dummy.matrix)
-      })
+    let cubeCounts = cubes.map(() => 0)
+    for (let n = 0; n < atoms.length; n++) {
+      const self = atoms[n]
+      if (!self) continue
+      const cube = cubes[self]
+      const z = n % size
+      const y = Math.floor(n / size) % size
+      const x = Math.floor(n / sizeSq)
+      dummy.position.set(x, z, y)
+      dummy.updateMatrix()
+      cube.setMatrixAt(cubeCounts[self]++, dummy.matrix)
     }
-
-    for (const type of Object.values(this._elementTypes)) {
-      type.instanceMatrix.needsUpdate = true
-    }
+    cubes.forEach((cube) => {
+      if (cube) {
+        cube.instanceMatrix.needsUpdate = true
+      }
+    })
   }
 }
 
-function buildCube(color, maxInstances) {
+function buildCube(element, maxInstances) {
   const geometry = new THREE.BoxGeometry(1, 1, 1)
-  // const material = new THREE.MeshLambertMaterial({
-  //   color: color,
-  //   specular: 0x222222,
-  //   shininess: 1
-  // })
   geometry.computeVertexNormals()
   const cube = new THREE.InstancedMesh(
     geometry,
-    // [
-    // material
-    // [
-    // new THREE.MeshBasicMaterial({ color: 0xfec1ea }),
-    new THREE.MeshPhongMaterial({
-      color
+    new THREE.MeshBasicMaterial({
+      color: element.color,
+      opacity: element.opacity ?? 1
     }),
-    // new THREE.MeshBasicMaterial({
-    //   color: 0x999999,
-    //   wireframe: true,
-    //   transparent: true,
-    //   opacity: 0.85
-    // }),
-    // ]
     maxInstances
   )
   return cube
