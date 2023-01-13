@@ -1,9 +1,8 @@
 {
-  "name": "cindy",
-  "version": "1.0.0",
-  "description": "",
+  "name": "sandy",
+  "version": "0.1.0",
+  "description": "Voxel Basec 3D Cellular Automata",
   "type": "module",
-  "main": "index.js",
   "scripts": {
     "start": "serve ./static",
     "build": "esbuild --bundle --sourcemap --format=esm --outfile=./static/main.js ./src/main.mjs",
