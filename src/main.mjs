@@ -13,8 +13,7 @@ export function main() {
   const stats = new Stats()
   document.body.append(stats.domElement)
   document.body.append(renderer.domElement)
-  const cellSize = 64
-
+  const cellSize = 128
   const fov = 75
   const aspect = 2 // the canvas default
   const near = 0.1
@@ -63,18 +62,16 @@ export function main() {
 
   let count = 0
   setInterval(() => {
-    if (count < 25_000) {
-      for (let n = 0; n < 100; n++) {
-        count++
-        chunk.setVoxel(
-          cellSize / 4 + randInt(cellSize / 2),
-          cellSize - 1,
-          cellSize / 4 + randInt(cellSize / 2),
-          Math.random() > 0.5 ? 2 : 1
-        )
-      }
-      // console.log(count)
+    for (let n = 0; n < cellSize; n++) {
+      count++
+      chunk.setVoxel(
+        (cellSize * 3) / 8 + randInt(cellSize / 8),
+        cellSize - 1,
+        (cellSize * 3) / 8 + randInt(cellSize / 8),
+        Math.random() > 0.5 ? 2 : 1
+      )
     }
+    // console.log(count)
     chunk.tick()
     needMeshUpdate = true
   }, 1000 / 60)
@@ -93,36 +90,7 @@ export function main() {
       scene.remove(mesh)
     }
 
-    const { positions, normals, uvs, indices } =
-      chunk.generateGeometryDataForCell(0, 0, 0)
-    const geometry = new THREE.BufferGeometry()
-    const material = new THREE.MeshLambertMaterial({
-      map: texture,
-      side: THREE.DoubleSide,
-      alphaTest: 0.1,
-      transparent: true
-    })
-
-    const positionNumComponents = 3
-    const normalNumComponents = 3
-    const uvNumComponents = 2
-    geometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(
-        new Float32Array(positions),
-        positionNumComponents
-      )
-    )
-    geometry.setAttribute(
-      'normal',
-      new THREE.BufferAttribute(new Float32Array(normals), normalNumComponents)
-    )
-    geometry.setAttribute(
-      'uv',
-      new THREE.BufferAttribute(new Float32Array(uvs), uvNumComponents)
-    )
-    geometry.setIndex(indices)
-    mesh = new THREE.Mesh(geometry, material)
+    mesh = chunk.buildMesh(texture)
     scene.add(mesh)
   }
 

@@ -1,3 +1,5 @@
+import * as THREE from 'three'
+
 function randInt(n) {
   return Math.floor(Math.random() * n)
 }
@@ -14,6 +16,16 @@ export class Chunk {
     this.cell = new Uint8Array(this.cellSize ** 3)
   }
   computeVoxelOffset(x, y, z) {
+    const cellSize = this.cellSize
+    if (
+      x < 0 ||
+      y < 0 ||
+      z < 0 ||
+      x >= cellSize ||
+      y >= cellSize ||
+      z >= cellSize
+    )
+      return -1
     return y * this.cellSliceSize + z * this.cellSize + x
   }
   setVoxel(x, y, z, v) {
@@ -21,9 +33,21 @@ export class Chunk {
     this.cell[voxelOffset] = v
   }
   getVoxel(x, y, z) {
+    const cellSize = this.cellSize
+    if (
+      x < 0 ||
+      y < 0 ||
+      z < 0 ||
+      x >= cellSize ||
+      y >= cellSize ||
+      z >= cellSize
+    ) {
+      return -1
+    }
     const voxelOffset = this.computeVoxelOffset(x, y, z)
     return this.cell[voxelOffset]
   }
+
   generateGeometryDataForCell() {
     const { cellSize, tileSize, tileTextureHeight, tileTextureWidth } = this
     const positions = []
@@ -40,7 +64,7 @@ export class Chunk {
             // There is a voxel here but do we need faces for it?
             for (const { dir, corners, uvRow } of Chunk.faces) {
               const neighbor = this.getVoxel(x + dir[0], y + dir[1], z + dir[2])
-              if (!neighbor) {
+              if (neighbor < 1) {
                 // this voxel has no neighbor in this direction so we need a face.
                 const ndx = positions.length / 3
                 for (const { pos, uv } of corners) {
@@ -69,85 +93,108 @@ export class Chunk {
 
   tick() {
     const cellSize = this.cellSize
-    const cellSliceSize = this.cellSliceSize
-    // console.time('tick')
-
-    const swapVoxels = (n1, n2) => {
-      const t = this.cell[n1]
-      this.cell[n1] = this.cell[n2]
-      this.cell[n2] = t
-    }
-
-    const delta = (x, y, z) => x + z * cellSize + y * cellSliceSize
 
     // compass direction paths for sand
     const sand = [
-      [delta(-1, 0, 0), delta(-1, -1, 0)],
-      [delta(1, 0, 0), delta(-1, -1, 0)],
-      [delta(0, 0, -1), delta(0, -1, -1)],
-      [delta(0, 0, 1), delta(0, -1, 1)]
+      [
+        [-1, 0, 0],
+        [-1, -1, 0]
+      ],
+      [
+        [1, 0, 0],
+        [1, -1, 0]
+      ],
+      [
+        [0, 0, -1],
+        [0, -1, -1]
+      ],
+      [
+        [0, 0, 1],
+        [0, -1, 1]
+      ]
     ]
 
     // compass direction paths for water
-    const water = [
-      [delta(-1, 0, 0)],
-      [delta(1, 0, 0)],
-      [delta(0, 0, -1)],
-      [delta(0, 0, 1)]
-    ]
+    const water = [[[-1, 0, 0]], [[1, 0, 0]], [[0, 0, -1]], [[0, 0, 1]]]
 
     for (let y = 0; y < cellSize; ++y) {
       for (let z = 0; z < cellSize; ++z) {
         for (let x = 0; x < cellSize; ++x) {
-          const n = this.computeVoxelOffset(x, y, z)
-          const voxel = this.cell[n]
-          if (!voxel) continue
+          const voxel = this.getVoxel(x, y, z)
+          if (!voxel || y === 0) continue
 
-          if (y === 0) continue
+          const under = this.getVoxel(x, y - 1, z)
+          if (!under || (voxel === 1 && under !== 1)) {
+            this.setVoxel(x, y, z, under)
+            this.setVoxel(x, y - 1, z, voxel)
+            continue
+          }
 
-          const under = this.cell[n - cellSliceSize]
-          if (under) {
-            // sand above water, swap them
-            if (voxel === 1 && under !== 1) {
-              swapVoxels(n, n - cellSliceSize)
-              continue
+          let dir = randInt(4)
+          let path
+
+          if (voxel === 1) {
+            // Sand
+            path = sand[dir]
+          } else if (voxel === 2) {
+            // Water
+            path = water[dir]
+          }
+
+          let deltaIndex
+          let d
+          let targetVoxel
+          let blocked = false
+          for (deltaIndex = 0; deltaIndex < path.length; deltaIndex++) {
+            d = path[deltaIndex]
+            targetVoxel = this.getVoxel(x + d[0], y + d[1], z + d[2])
+            if (targetVoxel === 1 || targetVoxel === -1) {
+              blocked = true
+              break
             }
-            let dir = randInt(4)
-            // sand behavior
-            if (voxel === 1) {
-              const path = sand[dir]
-              if (
-                path.every(
-                  (d) =>
-                    n + d >= 0 &&
-                    n + d < this.cell.length &&
-                    this.cell[n + d] !== 1
-                )
-              ) {
-                swapVoxels(n, n + path[path.length - 1])
-              }
-            } else if (voxel === 2) {
-              const path = water[dir]
-              if (
-                path.every(
-                  (d) =>
-                    n + d >= 0 &&
-                    n + d < this.cell.length &&
-                    this.cell[n + d] === 0
-                )
-              ) {
-                swapVoxels(n, n + path[path.length - 1])
-              }
-            }
-          } else {
-            this.cell[n] = 0
-            this.cell[n - cellSliceSize] = voxel
+          }
+
+          if (blocked === false) {
+            this.setVoxel(x, y, z, targetVoxel)
+            this.setVoxel(x + d[0], y + d[1], z + d[2], voxel)
           }
         }
       }
     }
+  }
 
-    // console.timeEnd('tick')
+  buildMesh(texture) {
+    const { positions, normals, uvs, indices } =
+      this.generateGeometryDataForCell(0, 0, 0)
+    const geometry = new THREE.BufferGeometry()
+    const material = new THREE.MeshLambertMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+      alphaTest: 0.1,
+      transparent: true
+    })
+
+    const positionNumComponents = 3
+    const normalNumComponents = 3
+    const uvNumComponents = 2
+    geometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(
+        new Float32Array(positions),
+        positionNumComponents
+      )
+    )
+    geometry.setAttribute(
+      'normal',
+      new THREE.BufferAttribute(new Float32Array(normals), normalNumComponents)
+    )
+    geometry.setAttribute(
+      'uv',
+      new THREE.BufferAttribute(new Float32Array(uvs), uvNumComponents)
+    )
+    geometry.setIndex(indices)
+
+    return new THREE.Mesh(geometry, material)
   }
 }
 Chunk.faces = [
