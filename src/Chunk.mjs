@@ -118,67 +118,70 @@ export class Chunk {
     let n
     let changed = false
 
-    const size = 32 ** 3
+    const size = 32 ** 2
 
-    let firstActive = this.atoms.findIndex((a) => a !== 0)
     // if (!firstActive) return
 
-    for (let i = 0; i < size; i++) {
-      n = randInt(size - firstActive) + firstActive
-      voxel = this.atoms[n]
-      if (!voxel) continue
+    for (let y = 0; y < 32; y++) {
+      let n = 0
+      for (let i = 0; i < size; i++) {
+        n = randOrder[i] + (y << 10)
+        // randInt(size) + (y << 10)
+        voxel = this.atoms[n]
+        if (!voxel) continue
 
-      x = n % 32
-      y = n >> 10
-      z = (n >> 5) % 32
+        x = n % 32
+        // y = n >> 10
+        z = (n >> 5) % 32
 
-      under = this.getVoxel(x, y - 1, z)
-      if (under === -1) {
-        under = getOutside(x, -1, z)
-        if (under === -1) continue
-      }
-
-      if (under === 0 || (voxel === 1 && under !== 1)) {
-        // swap atom under if empty or not sand
-        // TODO: should be if fillable
-        this.setVoxel(x, y, z, under)
-        if (y === 0) {
-          setOutside(x, -1, z, voxel)
-        } else {
-          this.setVoxel(x, y - 1, z, voxel)
-        }
-        changed = true
-        continue
-      }
-
-      let path = rules[voxel - 1][randInt(4)]
-
-      let deltaIndex
-      let d
-
-      let targetVoxel
-      let wentOut = false
-      for (deltaIndex = 0; deltaIndex < path.length; deltaIndex++) {
-        d = path[deltaIndex]
-        targetVoxel = this.getVoxel(x + d[0], y + d[1], z + d[2])
-        if (targetVoxel === -1) {
-          wentOut = true
-          targetVoxel = getOutside(x + d[0], y + d[1], z + d[2])
+        under = this.getVoxel(x, y - 1, z)
+        if (under === -1) {
+          under = getOutside(x, -1, z)
+          if (under === -1) continue
         }
 
-        if (targetVoxel === 1 || targetVoxel === -1) {
-          break
+        if (under === 0 || (voxel === 1 && under !== 1)) {
+          // swap atom under if empty or not sand
+          // TODO: should be if fillable
+          this.setVoxel(x, y, z, under)
+          if (y === 0) {
+            setOutside(x, -1, z, voxel)
+          } else {
+            this.setVoxel(x, y - 1, z, voxel)
+          }
+          changed = true
+          continue
         }
-      }
 
-      if (deltaIndex === path.length) {
-        changed = true
+        let path = rules[voxel - 1][randInt(4)]
 
-        this.setVoxel(x, y, z, targetVoxel)
-        if (wentOut) {
-          setOutside(x + d[0], y + d[1], z + d[2], voxel)
-        } else {
-          this.setVoxel(x + d[0], y + d[1], z + d[2], voxel)
+        let deltaIndex
+        let d
+
+        let targetVoxel
+        let wentOut = false
+        for (deltaIndex = 0; deltaIndex < path.length; deltaIndex++) {
+          d = path[deltaIndex]
+          targetVoxel = this.getVoxel(x + d[0], y + d[1], z + d[2])
+          if (targetVoxel === -1) {
+            wentOut = true
+            targetVoxel = getOutside(x + d[0], y + d[1], z + d[2])
+          }
+
+          if (targetVoxel === 1 || targetVoxel === -1) {
+            break
+          }
+        }
+
+        if (deltaIndex === path.length) {
+          changed = true
+
+          this.setVoxel(x, y, z, targetVoxel)
+          if (wentOut) {
+            setOutside(x + d[0], y + d[1], z + d[2], voxel)
+          } else {
+            this.setVoxel(x + d[0], y + d[1], z + d[2], voxel)
+          }
         }
       }
     }
@@ -186,6 +189,20 @@ export class Chunk {
     return changed
   }
 }
+const randOrder = Array(1024)
+  .fill(0)
+  .map((_, i) => i)
+shuffleArray(randOrder)
+
+function shuffleArray(array) {
+  for (var i = array.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1))
+    var temp = array[i]
+    array[i] = array[j]
+    array[j] = temp
+  }
+}
+
 const faces = [
   {
     // left
