@@ -124,6 +124,18 @@ export class Chunk {
 
     for (let y = 0; y < 32; y++) {
       let n = 0
+
+      // try to skip empty slices
+      // let end = y << (10 + size)
+      // let empty = true
+      // for (let n = y << 10; n < end; n++) {
+      //   if (this.atoms[n]) {
+      //     empty = false
+      //     break
+      //   }
+      // }
+      // if (empty) continue
+
       for (let i = 0; i < size; i++) {
         n = randOrder[i] + (y << 10)
         // randInt(size) + (y << 10)
@@ -192,12 +204,18 @@ export class Chunk {
 const randOrder = Array(1024)
   .fill(0)
   .map((_, i) => i)
+// .map((n, i, array) => {
+//   let j = Math.floor(Math.random() * array.length)
+//   array[i] = array[j]
+//   array[j] = n
+//   return array[i]
+// })
 shuffleArray(randOrder)
 
 function shuffleArray(array) {
-  for (var i = array.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1))
-    var temp = array[i]
+  for (let i = array.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1))
+    const temp = array[i]
     array[i] = array[j]
     array[j] = temp
   }
