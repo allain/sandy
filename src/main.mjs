@@ -3,10 +3,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import Stats from 'three/addons/libs/stats.module.js'
 import { World } from './World.mjs'
 
-function randInt(n) {
-  return Math.floor(Math.random() * n)
-}
-
 export function main() {
   const renderer = new THREE.WebGLRenderer()
 
@@ -142,7 +138,6 @@ export function main() {
     if (dropping) {
       for (let x = -2; x < 3; x++) {
         for (let z = -2; z < 3; z++) {
-          console.log(cursorPos.x + x, 31, cursorPos.z + z, dropping)
           world.setVoxel(cursorPos.x + x, 31, cursorPos.z + z, dropping)
         }
       }
