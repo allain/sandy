@@ -1,178 +1,47 @@
 import * as THREE from 'three'
 
+// from fast-random
+let seed = _seed(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER))
+function _seed(s) {
+  if ((seed = (s | 0) % 2147483647) <= 0) {
+    seed += 2147483646
+  }
+  return seed
+}
+
+function _nextInt() {
+  return (seed = (seed * 48271) % 2147483647)
+}
+
 function randInt(n) {
-  return Math.floor(Math.random() * n)
+  return _nextInt() % n
 }
 
 // Comes from: https://r105.threejsfundamentals.org/threejs/lessons/threejs-voxel-geometry.html
 export class Chunk {
-  constructor(options) {
-    this.cellSize = options.cellSize
-    this.tileSize = options.tileSize
-    this.tileTextureWidth = options.tileTextureWidth
-    this.tileTextureHeight = options.tileTextureHeight
+  constructor() {
+    this.atoms = new Uint8Array(32 ** 3)
+  }
 
-    this.cellSliceSize = this.cellSize ** 2
-    this.cell = new Uint8Array(this.cellSize ** 3)
-  }
-  computeVoxelOffset(x, y, z) {
-    const cellSize = this.cellSize
-    if (
-      x < 0 ||
-      y < 0 ||
-      z < 0 ||
-      x >= cellSize ||
-      y >= cellSize ||
-      z >= cellSize
-    )
-      return -1
-    return y * this.cellSliceSize + z * this.cellSize + x
-  }
   setVoxel(x, y, z, v) {
-    const voxelOffset = this.computeVoxelOffset(x, y, z)
-    this.cell[voxelOffset] = v
+    // const voxelOffset = y * 32 * 32 + z * 32 + x
+    const voxelOffset = (((y << 5) + z) << 5) + x
+    this.atoms[voxelOffset] = v
   }
+
   getVoxel(x, y, z) {
-    const cellSize = this.cellSize
-    if (
-      x < 0 ||
-      y < 0 ||
-      z < 0 ||
-      x >= cellSize ||
-      y >= cellSize ||
-      z >= cellSize
-    ) {
+    if (x < 0 || y < 0 || z < 0 || x > 31 || y > 31 || z > 31) {
       return -1
     }
-    const voxelOffset = this.computeVoxelOffset(x, y, z)
-    return this.cell[voxelOffset]
+    // const voxelOffset = y * 32 * 32 + z * 32 + x
+    const voxelOffset = (((y << 5) + z) << 5) + x
+    return this.atoms[voxelOffset]
   }
 
-  generateGeometryDataForCell() {
-    const { cellSize, tileSize, tileTextureHeight, tileTextureWidth } = this
-    const positions = []
-    const normals = []
-    const indices = []
-    const uvs = []
-
-    for (let y = 0; y < cellSize; ++y) {
-      for (let z = 0; z < cellSize; ++z) {
-        for (let x = 0; x < cellSize; ++x) {
-          const voxel = this.getVoxel(x, y, z)
-          if (voxel) {
-            const uvVoxel = voxel - 1
-            // There is a voxel here but do we need faces for it?
-            for (const { dir, corners, uvRow } of Chunk.faces) {
-              const neighbor = this.getVoxel(x + dir[0], y + dir[1], z + dir[2])
-              if (neighbor < 1) {
-                // this voxel has no neighbor in this direction so we need a face.
-                const ndx = positions.length / 3
-                for (const { pos, uv } of corners) {
-                  positions.push(pos[0] + x, pos[1] + y, pos[2] + z)
-                  normals.push(...dir)
-                  uvs.push(
-                    ((uvVoxel + uv[0]) * tileSize) / tileTextureWidth,
-                    1 - ((uvRow + 1 - uv[1]) * tileSize) / tileTextureHeight
-                  )
-                }
-                indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3)
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return {
-      positions,
-      normals,
-      indices,
-      uvs
-    }
-  }
-
-  tick() {
-    const cellSize = this.cellSize
-
-    // compass direction paths for sand
-    const sand = [
-      [
-        [-1, 0, 0],
-        [-1, -1, 0]
-      ],
-      [
-        [1, 0, 0],
-        [1, -1, 0]
-      ],
-      [
-        [0, 0, -1],
-        [0, -1, -1]
-      ],
-      [
-        [0, 0, 1],
-        [0, -1, 1]
-      ]
-    ]
-
-    // compass direction paths for water
-    const water = [[[-1, 0, 0]], [[1, 0, 0]], [[0, 0, -1]], [[0, 0, 1]]]
-
-    for (let y = 0; y < cellSize; ++y) {
-      for (let z = 0; z < cellSize; ++z) {
-        for (let x = 0; x < cellSize; ++x) {
-          const voxel = this.getVoxel(x, y, z)
-          if (!voxel || y === 0) continue
-
-          const under = this.getVoxel(x, y - 1, z)
-          if (!under || (voxel === 1 && under !== 1)) {
-            this.setVoxel(x, y, z, under)
-            this.setVoxel(x, y - 1, z, voxel)
-            continue
-          }
-
-          let dir = randInt(4)
-          let path
-
-          if (voxel === 1) {
-            // Sand
-            path = sand[dir]
-          } else if (voxel === 2) {
-            // Water
-            path = water[dir]
-          }
-
-          let deltaIndex
-          let d
-          let targetVoxel
-          let blocked = false
-          for (deltaIndex = 0; deltaIndex < path.length; deltaIndex++) {
-            d = path[deltaIndex]
-            targetVoxel = this.getVoxel(x + d[0], y + d[1], z + d[2])
-            if (targetVoxel === 1 || targetVoxel === -1) {
-              blocked = true
-              break
-            }
-          }
-
-          if (blocked === false) {
-            this.setVoxel(x, y, z, targetVoxel)
-            this.setVoxel(x + d[0], y + d[1], z + d[2], voxel)
-          }
-        }
-      }
-    }
-  }
-
-  buildMesh(texture) {
+  buildMesh(material) {
     const { positions, normals, uvs, indices } =
       this.generateGeometryDataForCell(0, 0, 0)
     const geometry = new THREE.BufferGeometry()
-    const material = new THREE.MeshLambertMaterial({
-      map: texture,
-      side: THREE.DoubleSide,
-      alphaTest: 0.1,
-      transparent: true
-    })
 
     const positionNumComponents = 3
     const normalNumComponents = 3
@@ -196,8 +65,128 @@ export class Chunk {
 
     return new THREE.Mesh(geometry, material)
   }
+
+  generateGeometryDataForCell() {
+    const positions = []
+    const normals = []
+    const indices = []
+    const uvs = []
+
+    let ndx = 0
+
+    let x, y, z, voxel
+
+    for (let n = 0; n < 32 ** 3; n++) {
+      voxel = this.atoms[n]
+      if (!voxel) continue
+      x = n % 32
+      y = n >> 10
+      z = (n >> 5) % 32
+
+      if (!voxel) continue
+
+      const material = voxel - 1
+
+      // There is a voxel here but do we need faces for it?
+      for (let { dir, corners, uvRow } of faces) {
+        const neighbor = this.getVoxel(x + dir[0], y + dir[1], z + dir[2])
+        if (neighbor > 0) continue
+
+        // this voxel has no neighbor in this direction so we need this face.
+        for (let { pos, uv } of corners) {
+          positions.push(pos[0] + x, pos[1] + y, pos[2] + z)
+          normals.push(dir[0], dir[1], dir[2])
+          uvs.push((material + uv[0]) / 16, 1 - (uvRow + 1 - uv[1]) / 3)
+        }
+        indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3)
+        ndx += 4
+      }
+    }
+
+    return {
+      positions,
+      normals,
+      indices,
+      uvs
+    }
+  }
+
+  tick(getOutside, setOutside) {
+    let x, y, z
+    let voxel
+    let under
+    let n
+    let changed = false
+
+    const size = 32 ** 3
+
+    let firstActive = this.atoms.findIndex((a) => a !== 0)
+    // if (!firstActive) return
+
+    for (let i = 0; i < size; i++) {
+      n = randInt(size - firstActive) + firstActive
+      voxel = this.atoms[n]
+      if (!voxel) continue
+
+      x = n % 32
+      y = n >> 10
+      z = (n >> 5) % 32
+
+      under = this.getVoxel(x, y - 1, z)
+      if (under === -1) {
+        under = getOutside(x, -1, z)
+        if (under === -1) continue
+      }
+
+      if (under === 0 || (voxel === 1 && under !== 1)) {
+        // swap atom under if empty or not sand
+        // TODO: should be if fillable
+        this.setVoxel(x, y, z, under)
+        if (y === 0) {
+          setOutside(x, -1, z, voxel)
+        } else {
+          this.setVoxel(x, y - 1, z, voxel)
+        }
+        changed = true
+        continue
+      }
+
+      let path = rules[voxel - 1][randInt(4)]
+
+      let deltaIndex
+      let d
+
+      let targetVoxel
+      let wentOut = false
+      for (deltaIndex = 0; deltaIndex < path.length; deltaIndex++) {
+        d = path[deltaIndex]
+        targetVoxel = this.getVoxel(x + d[0], y + d[1], z + d[2])
+        if (targetVoxel === -1) {
+          wentOut = true
+          targetVoxel = getOutside(x + d[0], y + d[1], z + d[2])
+        }
+
+        if (targetVoxel === 1 || targetVoxel === -1) {
+          break
+        }
+      }
+
+      if (deltaIndex === path.length) {
+        changed = true
+
+        this.setVoxel(x, y, z, targetVoxel)
+        if (wentOut) {
+          setOutside(x + d[0], y + d[1], z + d[2], voxel)
+        } else {
+          this.setVoxel(x + d[0], y + d[1], z + d[2], voxel)
+        }
+      }
+    }
+
+    return changed
+  }
 }
-Chunk.faces = [
+const faces = [
   {
     // left
     uvRow: 0,
@@ -264,4 +253,29 @@ Chunk.faces = [
       { pos: [1, 1, 1], uv: [1, 1] }
     ]
   }
+]
+
+const rules = [
+  // sand
+  [
+    [
+      [-1, 0, 0],
+      [-1, -1, 0]
+    ],
+    [
+      [1, 0, 0],
+      [1, -1, 0]
+    ],
+    [
+      [0, 0, -1],
+      [0, -1, -1]
+    ],
+    [
+      [0, 0, 1],
+      [0, -1, 1]
+    ]
+  ],
+
+  // compass direction paths for water
+  [[[-1, 0, 0]], [[1, 0, 0]], [[0, 0, -1]], [[0, 0, 1]]]
 ]
