@@ -12,22 +12,26 @@
   </head>
   <body
     x-data="{
-    selectedAtom: 1
-  }"
+      showCursor: true,
+      selectedAtom: 1
+    }"
+    :class="{'cursor-none': !showCursor}"
   >
-    <div class="palette flex items-justify absolute p-4">
-      <div
-        class="inline-block w-8 h-8 bg-[#b2b09b] opacity-75 m-1"
-        :class="{'opacity-100 border border-2 border-black': selectedAtom === 1}"
-        @click="selectedAtom = 1"
-        title="Sand"
-      ></div>
-      <div
-        class="inline-block w-8 h-8 bg-[#59a5d8] opacity-74 m-1"
-        :class="{'opacity-100 border border-2 border-black': selectedAtom === 2}"
-        @click="selectedAtom = 2"
-        title="Water"
-      ></div>
+    <div class="flex absolute p-4">
+      <div class="flex space-x-4">
+        <div
+          class="inline-block w-8 h-8 bg-[#b2b09b] opacity-50"
+          :class="{'opacity-100 scale-125': selectedAtom === 1}"
+          @click="selectedAtom = 1"
+          title="Sand"
+        ></div>
+        <div
+          class="inline-block w-8 h-8 bg-[#59a5d8] opacity-50"
+          :class="{'opacity-100 scale-125': selectedAtom === 2}"
+          @click="selectedAtom = 2"
+          title="Water"
+        ></div>
+      </div>
     </div>
 
     <div id="stats" class="absolute right-0 top-0"></div>

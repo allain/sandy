@@ -70,10 +70,24 @@ export function main() {
     scene: worldMesh
   })
 
-  const cursor = buildCube(0xffffff, 1)
+  const cursor = buildCursor(0xffffff, 5)
   scene.add(cursor)
 
   const raycaster = new THREE.Raycaster()
+
+  function buildCursor(color, size) {
+    const geometry = new THREE.BoxGeometry(size, 32, size)
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      opacity: 0.5,
+      transparent: true,
+      side: THREE.DoubleSide
+    })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.position.y = 32
+    mesh.updateMatrix()
+    return mesh
+  }
 
   function buildCube(color, size) {
     const geometry = new THREE.BoxGeometry(size, size, size)
@@ -103,30 +117,47 @@ export function main() {
 
     raycaster.setFromCamera(pointer, camera)
 
-    const intersects = raycaster.intersectObject(worldMesh, true)
-
-    const atomIntersect = intersects.find((i) => i.object != cursor)
+    // const intersects = raycaster.intersectObject(worldMesh, true)
+    const atomIntersect = null // intersects.find((i) => i.object != cursor)
     const planeIntersect = raycaster.intersectObject(plane)[0]
     if (atomIntersect) {
+      Alpine.evaluate(document.body, 'showCursor = false')
+      cursor.visible = true
       const face = atomIntersect.face
       cursorPos = atomIntersect.point
         .add(face.normal.multiplyScalar(0.5))
         .floor()
     } else if (planeIntersect) {
+      Alpine.evaluate(document.body, 'showCursor = false')
+      cursor.visible = true
       const face = planeIntersect.face
       cursorPos = planeIntersect.point
         .add(face.normal.multiplyScalar(0.5))
         .floor()
     } else {
+      Alpine.evaluate(document.body, 'showCursor = true')
+      cursor.visible = false
       return
     }
     cursor.position.x = cursorPos.x + 0.5
-    cursor.position.y = cursorPos.y + 0.5
+    cursor.position.y = 16 + 0.5
     cursor.position.z = cursorPos.z + 0.5
     cursor.updateMatrix()
   }
 
   let dropping = 0
+
+  Alpine.effect(() => {
+    const selectedAtom = Alpine.evaluate(document.body, 'selectedAtom')
+    switch (selectedAtom) {
+      case 1:
+        cursor.material.color.setHex(0xb2b09b)
+        break
+      case 2:
+        cursor.material.color.setHex(0x59a5d8)
+        break
+    }
+  })
 
   renderer.domElement.addEventListener('mousemove', updateCursorPos)
   renderer.domElement.addEventListener('touchmove', updateCursorPos)
@@ -147,7 +178,7 @@ export function main() {
   })
 
   renderer.domElement.addEventListener('mouseup', (event) => {
-    cursor.material.opacity = 1
+    // cursor.material.opacity = 1
     dropping = 0
   })
 
