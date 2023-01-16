@@ -142,7 +142,8 @@ export function main() {
     if (dropping) {
       for (let x = -2; x < 3; x++) {
         for (let z = -2; z < 3; z++) {
-          world.setVoxel(cursorPos.x + x, 31, cursorPos.z + x, dropping)
+          console.log(cursorPos.x + x, 31, cursorPos.z + z, dropping)
+          world.setVoxel(cursorPos.x + x, 31, cursorPos.z + z, dropping)
         }
       }
     }
