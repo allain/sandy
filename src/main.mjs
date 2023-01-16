@@ -11,7 +11,6 @@ export function main() {
   stats.domElement.style.cssText =
     'position:fixed;top:0;right:0;cursor:pointer;opacity:0.9;z-index:10000'
   document.body.append(stats.domElement)
-
   document.body.append(renderer.domElement)
   const fov = 75
   const aspect = 2 // the canvas default
@@ -25,6 +24,9 @@ export function main() {
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.mouseButtons = {
     RIGHT: THREE.MOUSE.ROTATE
+  }
+  controls.touches = {
+    TWO: THREE.TOUCH.ROTATE
   }
   controls.damping = true
   controls.target.set(0, 0, 0)
@@ -87,13 +89,17 @@ export function main() {
   palette.add(sandCube)
   camera.add(palette)
 
-  let cursorPos
+  let cursorPos = {}
 
-  renderer.domElement.addEventListener('mousemove', (event) => {
-    // if (dropping) return
+  function updateCursorPos(event) {
     const pointer = {}
-    pointer.x = (event.clientX / window.innerWidth) * 2 - 1
-    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+    if (event.type.startsWith('touch')) {
+      pointer.x = (event.touches[0].clientX / window.innerWidth) * 2 - 1
+      pointer.y = -(event.touches[0].clientY / window.innerHeight) * 2 + 1
+    } else {
+      pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+      pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+    }
 
     raycaster.setFromCamera(pointer, camera)
 
@@ -118,15 +124,26 @@ export function main() {
     cursor.position.y = cursorPos.y + 0.5
     cursor.position.z = cursorPos.z + 0.5
     cursor.updateMatrix()
-  })
+  }
 
   let dropping = 0
 
+  renderer.domElement.addEventListener('mousemove', updateCursorPos)
+  renderer.domElement.addEventListener('touchmove', updateCursorPos)
+
   renderer.domElement.addEventListener('mousedown', (event) => {
-    cursor.material.opacity = 0.1
     if (event.button === 0) {
       dropping = Alpine.evaluate(document.body, 'selectedAtom')
     }
+  })
+
+  renderer.domElement.addEventListener('touchstart', (event) => {
+    updateCursorPos(event)
+    dropping = Alpine.evaluate(document.body, 'selectedAtom')
+  })
+
+  renderer.domElement.addEventListener('touchend', (event) => {
+    dropping = 0
   })
 
   renderer.domElement.addEventListener('mouseup', (event) => {
