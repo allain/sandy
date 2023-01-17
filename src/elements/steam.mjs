@@ -10,34 +10,37 @@ export const steam = {
         set(0, 0, 0, above)
         set(0, 1, 0, 3)
       }
-      return true
+      return
     }
 
     if (above === -1) {
       if (int(100) === 0) {
         set(0, 0, 0, 2) // water
-        return true
+        return
       }
 
       if (int(1000) === 0) {
         set(0, 0, 0, 0, 0)
-        return true
+        return
       }
     }
 
-    // random compas direction
+    // every 10th tick move a little bit
     if (int(10) === 0) {
-      const dir = int(4)
-      const d = [[-1, 1, 0, 0][dir], 0, [0, 0, -1, 1][dir]]
-      const targetVoxel = get(d[0], d[1], d[2])
+      // random compass direction
+      const dir = [
+        [-1, 0, 0],
+        [1, 0, 0],
+        [0, 0, -1],
+        [0, 0, 1]
+      ][int(4)]
+      const targetVoxel = get(dir[0], dir[1], dir[2])
 
       if (targetVoxel === 0) {
         set(0, 0, 0, targetVoxel)
-        set(...d, 3)
-        return true
+        set(...dir, 3)
+        return
       }
     }
-
-    return false
   }
 }

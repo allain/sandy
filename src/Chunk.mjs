@@ -124,7 +124,10 @@ export class Chunk {
     const processors = this._elements.map((e) => e.processEvent.bind(e))
 
     const get = (dx, dy, dz) => this.getVoxel(dx + x, dy + y, dz + z)
-    const set = (dx, dy, dz, v) => this.setVoxel(dx + x, dy + y, dz + z, v)
+    const set = (dx, dy, dz, v) => {
+      changed = true
+      this.setVoxel(dx + x, dy + y, dz + z, v)
+    }
 
     const counts = Array(this._elements.length).fill(0)
 
@@ -141,7 +144,7 @@ export class Chunk {
         x = n % 32
         z = (n >> 5) % 32
 
-        changed = processors[voxel - 1]?.(get, set) || changed
+        processors[voxel - 1]?.(get, set)
       }
     }
 
