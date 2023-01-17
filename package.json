@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "serve ./static",
+    "lint": "eslint --config .eslintrc.cjs",
     "build": "esbuild --bundle --sourcemap --format=esm --outfile=./static/main.js ./src/main.mjs",
-    "test": "web-test-runner src/*.test.mjs --node-resolve --esbuild-target=auto"
+    "test": "web-test-runner src/*.test.mjs --node-resolve --coverage --esbuild-target=auto"
   },
   "keywords": [],
   "author": "",

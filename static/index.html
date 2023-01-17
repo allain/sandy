@@ -12,6 +12,7 @@
   </head>
   <body
     x-data="{
+      atomCount: 0,
       showCursor: true,
       selectedAtom: 1
     }"
@@ -34,7 +35,11 @@
       </div>
     </div>
 
-    <div id="stats" class="absolute right-0 top-0"></div>
+    <div class="absolute right-0 bottom-0 text-sm text-white p-4">
+      <div>Atoms: <span x-text="atomCount"></span></div>
+    </div>
+
+    <!-- <div id="stats" class="absolute right-0 top-0"></div> -->
     <script type="module">
       import { main } from './main.js'
       main()

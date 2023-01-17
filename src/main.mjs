@@ -3,6 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import Stats from 'three/addons/libs/stats.module.js'
 import { World } from './World.mjs'
 
+import { sand } from './elements/sand.mjs'
+import { water } from './elements/water.mjs'
+
 export function main() {
   const renderer = new THREE.WebGLRenderer()
 
@@ -67,7 +70,8 @@ export function main() {
 
   const world = new World({
     texture,
-    scene: worldMesh
+    scene: worldMesh,
+    elements: [sand, water]
   })
 
   const cursor = buildCursor(0xffffff, 5)
@@ -190,6 +194,10 @@ export function main() {
         }
       }
     }
+
+    Alpine.evaluate(document.body, function () {
+      this.atomCount = world.size
+    })
     // if (count < 1_000) {
     //   for (let n = 0; n < 32; n++) {
     //     count++
