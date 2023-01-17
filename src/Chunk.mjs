@@ -14,19 +14,20 @@ export class Chunk {
     this._get = ctx.get || (() => -1)
     this._set = ctx.set || (() => {})
     this._elements = elements
-    this._size = 0
+    this._counts = []
   }
 
-  get size() {
-    return this._size
+  get counts() {
+    return this._counts
   }
 
   setVoxel(x, y, z, v) {
-    // const voxelOffset = y * 32 * 32 + z * 32 + x
     if (x < 0 || y < 0 || z < 0 || x > 31 || y > 31 || z > 31) {
       this._set(x, y, z, v)
       return
     }
+
+    // const voxelOffset = y * 32 * 32 + z * 32 + x
     const voxelOffset = (((y << 5) + z) << 5) + x
     this.atoms[voxelOffset] = v
   }
@@ -125,14 +126,17 @@ export class Chunk {
     const get = (dx, dy, dz) => this.getVoxel(dx + x, dy + y, dz + z)
     const set = (dx, dy, dz, v) => this.setVoxel(dx + x, dy + y, dz + z, v)
 
-    let count = 0
-    for (y = 0; y < 32; y++) {
+    const counts = Array(this._elements.length).fill(0)
+
+    const randomSlices = shuffle(32)
+    for (let slice of randomSlices) {
+      y = slice
       for (let i = 0; i < size; i++) {
         n = order[i] + (y << 10)
         voxel = this.atoms[n]
         if (!voxel) continue
 
-        count++
+        counts[voxel - 1]++
 
         x = n % 32
         z = (n >> 5) % 32
@@ -141,7 +145,7 @@ export class Chunk {
       }
     }
 
-    this._size = count
+    this._counts = counts
 
     return changed
   }

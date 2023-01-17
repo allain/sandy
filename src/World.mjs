@@ -5,7 +5,7 @@ import { euclideanModulo } from 'three/src/math/MathUtils.js'
 export class World {
   constructor({ scene, texture, elements }) {
     this._scene = scene
-    this._chunkInfos = new Map() // 'x,y' => chunk
+    this._chunkInfos = new Map() // 'x,y,z' => chunk
     this._chunkMeshes = new Map() // chunk => Mesh
     this._elements = elements
     this.material = new THREE.MeshLambertMaterial({
@@ -17,9 +17,8 @@ export class World {
   }
 
   getVoxel(x, y, z) {
-    // if (x < -64 || x > 64) return -1
-    // if (z < -64 || z > 64) return -1
-    // if (y < -64 || y > 64) return -1
+    if (y > 31) return -1
+
     const xMod = euclideanModulo(x, 32)
     const yMod = euclideanModulo(y, 32)
     const zMod = euclideanModulo(z, 32)
@@ -28,10 +27,11 @@ export class World {
     const chunkZ = z - zMod
     const chunk = this._getChunk(chunkX, chunkY, chunkZ)
 
-    return chunk?.getVoxel(xMod, yMod, zMod) ?? -1
+    return chunk?.getVoxel(xMod, yMod, zMod) ?? 0
   }
 
   setVoxel(x, y, z, voxel) {
+    if (y > 31) return
     const xMod = euclideanModulo(x, 32)
     const yMod = euclideanModulo(y, 32)
     const zMod = euclideanModulo(z, 32)
@@ -117,7 +117,13 @@ export class World {
       }
     }
   }
-  get size() {
-    return this._size
+  get counts() {
+    const counts = Array(this._elements.length).fill(0)
+    for (const { chunk } of this._chunkInfos.values()) {
+      const chunkCounts = chunk.counts
+      chunkCounts.map((n, i) => (counts[i] += n))
+    }
+
+    return Object.fromEntries(this._elements.map((e, i) => [e.name, counts[i]]))
   }
 }

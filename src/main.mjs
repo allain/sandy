@@ -5,6 +5,8 @@ import { World } from './World.mjs'
 
 import { sand } from './elements/sand.mjs'
 import { water } from './elements/water.mjs'
+import { steam } from './elements/steam.mjs'
+import { stone } from './elements/stone.mjs'
 
 export function main() {
   const renderer = new THREE.WebGLRenderer()
@@ -15,12 +17,11 @@ export function main() {
     'position:fixed;top:0;right:0;cursor:pointer;opacity:0.9;z-index:10000'
   document.body.append(stats.domElement)
   document.body.append(renderer.domElement)
-  const fov = 75
-  const aspect = 2 // the canvas default
-  const near = 0.1
-  const far = 1000
-  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
+
+  // fov, aspect, near, far
+  const camera = new THREE.PerspectiveCamera(75, 2, 0.1, 1000)
   camera.position.set(0, 10, 64)
+
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
 
@@ -42,13 +43,15 @@ export function main() {
 
   function addLight(x, y, z) {
     const color = 0xffffff
-    const intensity = 1
+    const intensity = 0.5
     const light = new THREE.DirectionalLight(color, intensity)
     light.position.set(x, y, z)
     scene.add(light)
   }
-  addLight(-1, 2, 4)
-  addLight(1, -1, -2)
+  addLight(200, 200, 200)
+  addLight(200, 200, -200)
+  addLight(-200, 200, 200)
+  addLight(-200, 200, -200)
 
   const loader = new THREE.TextureLoader()
   const texture = loader.load('/tiles1.png', render)
@@ -71,7 +74,7 @@ export function main() {
   const world = new World({
     texture,
     scene: worldMesh,
-    elements: [sand, water]
+    elements: [sand, water, steam, stone]
   })
 
   const cursor = buildCursor(0xffffff, 5)
@@ -160,6 +163,9 @@ export function main() {
       case 2:
         cursor.material.color.setHex(0x59a5d8)
         break
+      case 4:
+        cursor.material.color.setHex(0x333333)
+        break
     }
   })
 
@@ -196,7 +202,7 @@ export function main() {
     }
 
     Alpine.evaluate(document.body, function () {
-      this.atomCount = world.size
+      this.atomCounts = Object.entries(world.counts)
     })
     // if (count < 1_000) {
     //   for (let n = 0; n < 32; n++) {
