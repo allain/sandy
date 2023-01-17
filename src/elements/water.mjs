@@ -6,37 +6,39 @@ export const water = {
   processEvent(get, set) {
     const under = get(0, -1, 0)
 
+    // if empty below, just move into it
     if (under === 0) {
       set(0, 0, 0, 0)
       set(0, -1, 0, 2)
       return true
     }
 
-    if (under === -1) {
-      if (int(100_000) === 0) {
-        // turn water into steam
-        set(0, 0, 0, 3)
-      }
+    if (int(100_000) === 0) {
+      // turn water into steam
+      set(0, 0, 0, 3)
       return
     }
 
-    const dir = int(4)
-    const d = [[-1, 1, 0, 0][dir], 0, [0, 0, -1, 1][dir]]
-    const targetVoxel = get(d[0], d[1], d[2])
+    // have water stop moving when it touches the ground
+    if (under === -1) {
+      return
+    }
+
+    // pick a cardinal direction
+    const dir = [
+      [-1, 0, 0],
+      [1, 0, 0],
+      [0, 0, -1],
+      [0, 0, 1]
+    ][int(4)]
+    const targetVoxel = get(dir[0], dir[1], dir[2])
 
     if (targetVoxel === 0) {
       set(0, 0, 0, targetVoxel)
-      set(...d, 2)
+      set(...dir, 2)
       return true
     }
 
     return false
   }
 }
-
-const paths = [
-  [-1, 0, 0],
-  [1, 0, 0],
-  [0, 0, -1],
-  [0, 0, 1]
-]

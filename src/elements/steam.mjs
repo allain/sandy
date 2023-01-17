@@ -18,6 +18,7 @@ export const steam = {
         set(0, 0, 0, 2) // water
         return true
       }
+
       if (int(1000) === 0) {
         set(0, 0, 0, 0, 0)
         return true
@@ -25,7 +26,7 @@ export const steam = {
     }
 
     // random compas direction
-    if (int(100) === 0) {
+    if (int(10) === 0) {
       const dir = int(4)
       const d = [[-1, 1, 0, 0][dir], 0, [0, 0, -1, 1][dir]]
       const targetVoxel = get(d[0], d[1], d[2])
