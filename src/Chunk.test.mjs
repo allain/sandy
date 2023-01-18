@@ -1,5 +1,5 @@
 import { expect } from '@esm-bundle/chai'
-import { Chunk } from './Chunk.mjs'
+import { Chunk, generateGeometryData } from './Chunk.mjs'
 import * as random from './lib/random.mjs'
 import { sand } from './elements/sand.mjs'
 
@@ -84,5 +84,43 @@ describe('Chunk', () => {
     chunk.setVoxel(0, 0, 0, 1)
     chunk.tick()
     expect(chunk.getVoxel(0, 0, 0)).to.equal(1, 'should still be on floor')
+  })
+
+  it('counts atoms if counting given', () => {
+    const chunk = new Chunk({}, [sand])
+    expect(chunk.counts).to.deep.equal([0])
+    chunk.setVoxel(0, 1, 0, 1)
+    chunk.tick()
+    expect(chunk.getVoxel(0, 1, 0)).to.equal(0, 'should not be in this pos')
+    expect(chunk.getVoxel(0, 0, 0)).to.equal(1, 'should be in this pos')
+  })
+
+  it('can generate geometry data when empty', () => {
+    const emptyAtoms = Array(32 ** 3).fill(0)
+    const generated = generateGeometryData(emptyAtoms)
+    expect(generated).to.deep.equal({
+      indices: [],
+      normals: [],
+      positions: [],
+      uvs: []
+    })
+  })
+
+  it('can generate geometry data for single atom', () => {
+    const atoms = Array(32 ** 3).fill(0)
+    atoms[0] = 1
+
+    const generated = generateGeometryData(atoms)
+    // 3 coords per corner * 8 corners * 3 triangles per corner
+    expect(generated.positions).to.have.length(72)
+  })
+
+  it('can generates only outer surfaces', () => {
+    const atoms = Array(32 ** 3).fill(0)
+    atoms[0] = 1
+    atoms[1] = 1
+
+    const generated = generateGeometryData(atoms)
+    expect(generated.positions.length).to.be.lessThan(72 * 2)
   })
 })

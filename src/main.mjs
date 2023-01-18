@@ -83,7 +83,7 @@ export function main() {
   const raycaster = new THREE.Raycaster()
 
   function buildCursor(color, size) {
-    const geometry = new THREE.BoxGeometry(size, 32, size)
+    const geometry = new THREE.BoxGeometry(size * 1.01, 32, size * 1.01)
     const material = new THREE.MeshBasicMaterial({
       color,
       opacity: 0.5,

@@ -41,7 +41,7 @@ export const sand = {
       d = path[deltaIndex]
       targetVoxel = get(...d)
 
-      if (targetVoxel === 1 || targetVoxel === -1) {
+      if (targetVoxel === 1 || targetVoxel === -1 || targetVoxel === 4) {
         break
       }
     }

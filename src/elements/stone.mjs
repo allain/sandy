@@ -7,7 +7,7 @@ export const stone = {
       return
     }
 
-    if (under === 0 || under === 2) {
+    if (under < 4) {
       set(0, 0, 0, under)
       set(0, -1, 0, 4)
       return true

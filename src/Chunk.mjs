@@ -14,7 +14,7 @@ export class Chunk {
     this._get = ctx.get || (() => -1)
     this._set = ctx.set || (() => {})
     this._elements = elements
-    this._counts = []
+    this._counts = Array(elements.length).fill(0)
   }
 
   get counts() {
@@ -42,8 +42,9 @@ export class Chunk {
   }
 
   buildMesh(material) {
-    const { positions, normals, uvs, indices } =
-      this.generateGeometryDataForCell(0, 0, 0)
+    const { positions, normals, uvs, indices } = generateGeometryData(
+      this.atoms
+    )
     const geometry = new THREE.BufferGeometry()
 
     const positionNumComponents = 3
@@ -69,56 +70,13 @@ export class Chunk {
     return new THREE.Mesh(geometry, material)
   }
 
-  generateGeometryDataForCell() {
-    const positions = []
-    const normals = []
-    const indices = []
-    const uvs = []
-
-    let ndx = 0
-
-    let x, y, z, voxel
-
-    for (let n = 0; n < 32 ** 3; n++) {
-      voxel = this.atoms[n]
-      if (!voxel) continue
-      x = n % 32
-      y = n >> 10
-      z = (n >> 5) % 32
-
-      if (!voxel) continue
-
-      const material = voxel - 1
-
-      // There is a voxel here but do we need faces for it?
-      for (let { dir, corners, uvRow } of faces) {
-        const neighbor = this.getVoxel(x + dir[0], y + dir[1], z + dir[2])
-        if (neighbor > 0) continue
-
-        // this voxel has no neighbor in this direction so we need this face.
-        for (let { pos, uv } of corners) {
-          positions.push(pos[0] + x, pos[1] + y, pos[2] + z)
-          normals.push(dir[0], dir[1], dir[2])
-          uvs.push((material + uv[0]) / 16, 1 - (uvRow + 1 - uv[1]) / 3)
-        }
-        indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3)
-        ndx += 4
-      }
-    }
-
-    return {
-      positions,
-      normals,
-      indices,
-      uvs
-    }
-  }
-
   tick() {
-    let x, y, z
+    let x, y, z, yOffset
     let voxel
     let n
     let changed = false
+
+    const atoms = this.atoms
 
     const size = 32 ** 2
     const processors = this._elements.map((e) => e.processEvent.bind(e))
@@ -134,9 +92,11 @@ export class Chunk {
     const randomSlices = shuffle(32)
     for (let slice of randomSlices) {
       y = slice
+      yOffset = y << 10
+
       for (let i = 0; i < size; i++) {
-        n = order[i] + (y << 10)
-        voxel = this.atoms[n]
+        n = order[i] + yOffset
+        voxel = atoms[n]
         if (!voxel) continue
 
         counts[voxel - 1]++
@@ -225,27 +185,48 @@ const faces = [
   }
 ]
 
-const rules = [
-  // sand
-  [
-    [
-      [-1, 0, 0],
-      [-1, -1, 0]
-    ],
-    [
-      [1, 0, 0],
-      [1, -1, 0]
-    ],
-    [
-      [0, 0, -1],
-      [0, -1, -1]
-    ],
-    [
-      [0, 0, 1],
-      [0, -1, 1]
-    ]
-  ],
+export function generateGeometryData(atoms) {
+  const positions = []
+  const normals = []
+  const indices = []
+  const uvs = []
 
-  // compass direction paths for water
-  [[[-1, 0, 0]], [[1, 0, 0]], [[0, 0, -1]], [[0, 0, 1]]]
-]
+  let ndx = 0
+
+  let x, y, z, voxel, neighbor, neighborIndex
+
+  let n = 0
+  for (voxel = atoms[n]; voxel !== undefined; voxel = atoms[++n]) {
+    if (!voxel) continue
+    x = n % 32
+    y = n >> 10
+    z = (n >> 5) % 32
+
+    if (!voxel) continue
+
+    const element = voxel - 1
+
+    // There is a voxel here but do we need faces for it?
+    for (let { dir, corners, uvRow } of faces) {
+      neighborIndex = ((y + dir[1]) << 10) + ((z + dir[2]) << 5) + x + dir[0]
+      neighbor = atoms[neighborIndex]
+      if (neighbor > 0) continue
+
+      // this voxel has no neighbor in this direction so we need this face.
+      for (let { pos, uv } of corners) {
+        positions.push(pos[0] + x, pos[1] + y, pos[2] + z)
+        normals.push(dir[0], dir[1], dir[2])
+        uvs.push((element + uv[0]) / 16, 1 - (uvRow + 1 - uv[1]) / 3)
+      }
+      indices.push(ndx, ndx + 1, ndx + 2, ndx + 2, ndx + 1, ndx + 3)
+      ndx += 4
+    }
+  }
+
+  return {
+    positions,
+    normals,
+    indices,
+    uvs
+  }
+}
