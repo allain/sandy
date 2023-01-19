@@ -3,16 +3,35 @@ import * as THREE from 'three'
 import { euclideanModulo } from 'three/src/math/MathUtils.js'
 
 export class World {
-  constructor({ scene, texture, elements }) {
+  constructor({ scene, elements }) {
     this._scene = scene
     this._chunkInfos = new Map() // 'x,y,z' => chunk
     this._chunkMeshes = new Map() // chunk => Mesh
     this._elements = elements
+
+    const canvas = document.createElement('canvas')
+    canvas.style = 'image-rendering: pixelated;'
+    canvas.width = 16
+    canvas.height = 3
+    const ctx = canvas.getContext('2d')
+    elements.forEach((el, elIndex) => {
+      el.color ??= '0xffffff'
+      const r = el.color >> 16
+      const g = (el.color >> 8) % 256
+      const b = el.color % 256
+      ctx.fillStyle = `rgb(${r},${g},${b})`
+      ctx.fillRect(elIndex, 0, 1, 3)
+    })
+    const texture = new THREE.Texture(canvas)
+    texture.needsUpdate = true
+    texture.magFilter = THREE.NearestFilter
+    texture.minFilter = THREE.NearestFilter
+
     this.material = new THREE.MeshLambertMaterial({
       map: texture,
-      side: THREE.DoubleSide,
-      alphaTest: 0.1,
-      transparent: true
+      side: THREE.DoubleSide
+      // alphaTest: 0.1,
+      // transparent: true
     })
   }
 

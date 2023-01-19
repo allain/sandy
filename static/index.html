@@ -38,6 +38,18 @@
           @click="selectedAtom = 4"
           title="Stone"
         ></div>
+        <div
+          class="inline-block w-8 h-8 bg-[#ffffff] opacity-75"
+          :class="{'opacity-100 scale-125': selectedAtom === 5}"
+          @click="selectedAtom = 5"
+          title="Ice"
+        ></div>
+        <div
+          class="inline-block w-8 h-8 bg-[#ff0000] opacity-75"
+          :class="{'opacity-100 scale-125': selectedAtom === 6}"
+          @click="selectedAtom = 6"
+          title="Lava"
+        ></div>
       </div>
     </div>
 

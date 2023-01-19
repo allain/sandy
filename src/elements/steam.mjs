@@ -3,6 +3,8 @@ import { int } from '../lib/random.mjs'
 export const steam = {
   name: 'steam',
   material: 3,
+  color: 0xccccff,
+  density: 1,
   processEvent(get, set) {
     const above = get(0, 1, 0)
     if (above !== 3 && above !== -1) {

@@ -7,6 +7,8 @@ import { sand } from './elements/sand.mjs'
 import { water } from './elements/water.mjs'
 import { steam } from './elements/steam.mjs'
 import { stone } from './elements/stone.mjs'
+import { ice } from './elements/ice.mjs'
+import { lava } from './elements/lava.mjs'
 
 export function main() {
   const renderer = new THREE.WebGLRenderer()
@@ -53,11 +55,6 @@ export function main() {
   addLight(-200, 200, 200)
   addLight(-200, 200, -200)
 
-  const loader = new THREE.TextureLoader()
-  const texture = loader.load('/tiles1.png', render)
-  texture.magFilter = THREE.NearestFilter
-  texture.minFilter = THREE.NearestFilter
-
   const geometry = new THREE.BoxGeometry(256, 1, 256)
   const material = new THREE.MeshBasicMaterial({
     color: 0x626267,
@@ -71,10 +68,11 @@ export function main() {
   const worldMesh = new THREE.Mesh()
   scene.add(worldMesh)
 
+  const elements = [sand, water, steam, stone, ice, lava]
+
   const world = new World({
-    texture,
     scene: worldMesh,
-    elements: [sand, water, steam, stone]
+    elements
   })
 
   const cursor = buildCursor(0xffffff, 5)
@@ -156,17 +154,8 @@ export function main() {
 
   Alpine.effect(() => {
     const selectedAtom = Alpine.evaluate(document.body, 'selectedAtom')
-    switch (selectedAtom) {
-      case 1:
-        cursor.material.color.setHex(0xb2b09b)
-        break
-      case 2:
-        cursor.material.color.setHex(0x59a5d8)
-        break
-      case 4:
-        cursor.material.color.setHex(0x333333)
-        break
-    }
+    const element = elements[selectedAtom - 1]
+    cursor.material.color.setHex(element.color)
   })
 
   renderer.domElement.addEventListener('mousemove', updateCursorPos)
