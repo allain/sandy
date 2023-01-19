@@ -21,7 +21,7 @@ export function main() {
   document.body.append(renderer.domElement)
 
   // fov, aspect, near, far
-  const camera = new THREE.PerspectiveCamera(180, 2, 0.1, 1000)
+  const camera = new THREE.PerspectiveCamera(45, 2, 0.1, 1000)
   camera.position.set(0, 10, 64)
 
   camera.aspect = window.innerWidth / window.innerHeight
