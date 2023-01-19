@@ -29,19 +29,47 @@ export const steam = {
 
     // every 10th tick move a little bit
     if (int(10) === 0) {
-      // random compass direction
-      const dir = [
-        [-1, 0, 0],
-        [1, 0, 0],
-        [0, 0, -1],
-        [0, 0, 1]
-      ][int(4)]
-      const targetVoxel = get(dir[0], dir[1], dir[2])
+      if (above === -1) {
+        // random compass direction
 
-      if (targetVoxel === 0) {
-        set(0, 0, 0, targetVoxel)
-        set(...dir, 3)
-        return
+        const dirs = [
+          [-1, 0, 0],
+          [1, 0, 0],
+          [0, 0, -1],
+          [0, 0, 1]
+        ]
+        for (const d of dirs) {
+          const nextVoxel = get(d[0], 0, d[2])
+
+          if (nextVoxel === 3) {
+            // steam next, do nothing
+            return
+          }
+        }
+        for (const d of dirs) {
+          const nextVoxel = get(d[0] * 2, 0, d[2] * 2)
+
+          if (nextVoxel === 3) {
+            set(0, 0, 0, nextVoxel)
+            set(...d, 3)
+            // steam 2 away move towards it
+            return
+          }
+        }
+      } else {
+        const d = [
+          [-1, 0, 0],
+          [1, 0, 0],
+          [0, 0, -1],
+          [0, 0, 1]
+        ][int(4)]
+        const nextVoxel = get(d[0], 0, d[2])
+
+        if (nextVoxel === 0) {
+          set(0, 0, 0, nextVoxel)
+          set(...d, 3)
+          return
+        }
       }
     }
   }
