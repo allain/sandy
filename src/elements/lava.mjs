@@ -17,18 +17,21 @@ export const lava = {
       case 2:
         set(0, -1, 0, 3) // steam
         return
+      case 5:
+        set(0, -1, 0, 2) // water
+        return
     }
 
     // have water stop moving when it touches the ground
-    if (under === -1) {
-      return
-    }
+    // if (under === -1) {
+    //   return
+    // }
 
-    if (int(25) !== 0) return
+    // if (int(25) !== 0) return
 
     if (int(10_000) === 0) {
       // turn to stone every once in a while
-      set(0, 0, 0, 5)
+      set(0, 0, 0, 4)
       return
     }
 
@@ -44,15 +47,25 @@ export const lava = {
 
     switch (targetVoxel) {
       case 0:
-        set(0, 0, 0, targetVoxel)
-        set(...dir, 6)
+        if (int(50) === 0 && under !== -1) {
+          set(0, 0, 0, targetVoxel)
+          set(...dir, 6)
+        }
         break
       case 2:
         // convert water to steam
         set(...dir, 3)
-        if (int(100) === 0) {
+        if (int(10) === 0) {
           // turn to stone
-          set(0, 0, 0, 5)
+          set(0, 0, 0, 4)
+        }
+        break
+      case 5:
+        // convert ice to water
+        set(...dir, 2)
+        if (int(10) === 0) {
+          // turn to stone
+          set(0, 0, 0, 4)
         }
         break
     }
