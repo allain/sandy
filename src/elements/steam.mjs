@@ -38,6 +38,8 @@ export const steam = {
           [0, 0, -1],
           [0, 0, 1]
         ]
+
+        // if next to steam do nothing
         for (const d of dirs) {
           const nextVoxel = get(d[0], 0, d[2])
 
@@ -46,6 +48,8 @@ export const steam = {
             return
           }
         }
+
+        // if steam is 2 away, move towards it
         for (const d of dirs) {
           const nextVoxel = get(d[0] * 2, 0, d[2] * 2)
 
@@ -57,6 +61,7 @@ export const steam = {
           }
         }
       } else {
+        // if not at top, then jiggle
         const d = [
           [-1, 0, 0],
           [1, 0, 0],
